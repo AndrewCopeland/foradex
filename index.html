@@ -64,7 +64,17 @@
           let cell = document.createElement("th")
           cell.innerText = value
           return cell
-        }
+      }
+
+      const createForadexGoogleMapsCall = (long, lat) => {
+        let cell = document.createElement("th")
+        let link = document.createElement("a")
+        link.href = `https://www.google.com/maps/search/?api=1&query=${lat},${long}`
+        link.innerText = "Map"
+        console.log("google query: " + link.href)
+        cell.appendChild(link)
+        return cell
+      }
 
       const createForadexRow = (find) => {
         let row = document.createElement("tr")
@@ -74,6 +84,7 @@
         row.appendChild(createForadexCell(find.type))
         row.appendChild(createForadexCell(find.locationLong))
         row.appendChild(createForadexCell(find.locationLat))
+        row.appendChild(createForadexGoogleMapsCall(find.locationLong, find.locationLat))
         return row
       }
 
@@ -276,6 +287,7 @@
         <th>Type</th>
         <th>Longitude</th>
         <th>Latitude</th>
+        <th>Google Maps</th>
       </tr>
     </thead>
     <tbody id="foradex-table-body">
