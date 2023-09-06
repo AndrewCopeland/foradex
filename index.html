@@ -2,48 +2,7 @@
 <html>
 <head>
   <title>Foradex</title>
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-  <link rel="manifest" href="/site.webmanifest">
-  <style>
-    .foradex-table {
-      border-collapse: collapse;
-      margin: 25px 0;
-      font-size: 0.9em;
-      font-family: sans-serif;
-      min-width: 400px;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
-    }
-
-    .foradex-table thead tr {
-      background-color: #009879;
-      color: #ffffff;
-      text-align: left;
-    }
-
-    .foradex-table th,
-    .foradex-table td {
-        padding: 12px 15px;
-    }
-
-    .foradex-table tbody tr {
-      border-bottom: 1px solid #dddddd;
-    }
-
-    .foradex-table tbody tr:nth-of-type(even) {
-      background-color: #f3f3f3;
-    }
-
-    .foradex-table tbody tr:last-of-type {
-      border-bottom: 2px solid #009879;
-    }
-
-    .foradex-table tbody tr.active-row {
-      font-weight: bold;
-      color: #009879;
-    }
-  </style>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
   <script>
     const defaultResourceTypes = [
       "mushroom",
@@ -86,8 +45,8 @@
         row.appendChild(createForadexCell(find.name))
         row.appendChild(createForadexCell(find.locationName))
         row.appendChild(createForadexCell(find.type))
-        row.appendChild(createForadexCell(find.locationLong))
         row.appendChild(createForadexCell(find.locationLat))
+        row.appendChild(createForadexCell(find.locationLong))
         row.appendChild(createForadexGoogleMapsCall(find.locationLong, find.locationLat))
         return row
       }
@@ -245,46 +204,49 @@
 </head>
 <body>
   <h1>Foradex</h1>
-  <h3>a tool that logs a forager's findings and location</h3>
+  <h4>a tool that logs a forager's findings and location</h4>
+  <hr/>
   <h2>Add New Resource</h2>
   <form>
 
     <label for="type">Type:</label>
     <select id="resource-type" name="type" required>
       <option value="" selected disabled>Select an option</option>
-    </select><br><br>
+    </select>
 
     <label for="name">Name:</label>
-    <input type="text" id="resource-name" name="name" required><br><br>
+    <input type="text" id="resource-name" name="name" required>
 
     <button type="button" onclick="saveResourceForm()">Submit</button>
   </form>
+  <hr/>
   <h2>Add New Find</h2>
   <form>
     <label for="type">Type:</label>
     <select id="find-type" name="type" required>
       <option value="" selected disabled>Select an option</option>
-    </select><br><br>
+    </select>
 
     <label for="name">Name:</label>
     <select id="find-name" name="name" required>
       <option value="" selected disabled>Select an option</option>
-    </select><br><br>
+    </select>
 
     <label for="locationName">Location Name:</label>
-    <input type="text" id="find-locationName" name="locationName" required><br><br>
+    <input type="text" id="find-locationName" name="locationName" required>
     
     <label for="date">Date:</label>
-    <input type="date" id="find-date" name="date" required><br><br>
+    <input type="date" id="find-date" name="date" required>
     
     <label for="locationLong">Location Longitude:</label>
-    <input type="text" id="find-locationLong" name="locationLong" required><br><br>
+    <input type="text" id="find-locationLong" name="locationLong" required>
     
     <label for="locationLat">Location Latitude:</label>
-    <input type="text" id="find-locationLat" name="locationLat" required><br><br>
+    <input type="text" id="find-locationLat" name="locationLat" required>
     
     <button type="button" onclick="saveFormData()">Submit</button>
   </form>
+  <hr/>
   <h2>My Foradex</h2>
   <table id="foradex-table" class="foradex-table">
     <thead>
@@ -293,14 +255,15 @@
         <th>Name</th>
         <th>Location</th>
         <th>Type</th>
-        <th>Longitude</th>
         <th>Latitude</th>
+        <th>Longitude</th>
         <th>Google Maps</th>
       </tr>
     </thead>
     <tbody id="foradex-table-body">
     </tbody>
   </table>
+  <hr/>
   <h2>Motivation</h2>
   <p>I was frustrated with the bloated foraging apps that currently exist and wanted a simple light weight tool to log my foraging finds.</p>
   <p>Own <b>all your data</b></p>
@@ -308,7 +271,7 @@
   <p>No <b>internet required</b></p>
   <p>No <b>cloud storage</b></p>
   <p>Hopefully we can share our foradexes some day 😜</p>
-  <br>
+  <hr/>
   <div class="footer">
     <p><a href="https://github.com/AndrewCopeland/foradex">Github</a></p>
   </div>
