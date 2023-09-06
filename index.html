@@ -90,7 +90,7 @@
 
       let tableForadex = document.getElementById("foradex-table-body")
       tableForadex.innerHTML = ""
-      actualForadex.find.map((find, i ) => {
+      actualForadex.find.reverse().map((find, i ) => {
         tableForadex.appendChild(createForadexRow(find))
       })
     }
@@ -168,7 +168,7 @@
 
       appendResource("find", formData)
 
-      alert("Form data saved successfully!");
+      alert("Find saved!");
 
       refreshForadexTable()
     }
@@ -182,6 +182,8 @@
         name: name
       }
       appendResource("resource", data) 
+
+      alert("Resource saved!");
     }
 
     const getCurrentLocation = () => {
@@ -238,7 +240,9 @@
   </script>
 </head>
 <body>
-  <h1>Add New Resource</h1>
+  <h1>Foradex</h1>
+  <h3>a tool that logs a forager's findings and location</h3>
+  <h2>Add New Resource</h2>
   <form>
 
     <label for="type">Type:</label>
@@ -251,7 +255,7 @@
 
     <button type="button" onclick="saveResourceForm()">Submit</button>
   </form>
-  <h1>Add New Find</h1>
+  <h2>Add New Find</h2>
   <form>
     <label for="type">Type:</label>
     <select id="find-type" name="type" required>
@@ -277,7 +281,7 @@
     
     <button type="button" onclick="saveFormData()">Submit</button>
   </form>
-  <h1>My Foradex</h1>
+  <h2>My Foradex</h2>
   <table id="foradex-table" class="foradex-table">
     <thead>
       <tr>
@@ -293,5 +297,10 @@
     <tbody id="foradex-table-body">
     </tbody>
   </table>
+  <h2>Motivation</h2>
+  <p>I was frustrated with the bloated foraging apps that currently exist and wanted a simple light weight tool to log my foraging finds.</p>
+  <p>No <b>login required</b></p>
+  <p>No <b>internet connection required</b></p>
+  <p>No <b>cloud storage</b></p>
 </body>
 </html>
