@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Foradex</title>
+  <style>
+    .foradex-table {
+      border-collapse: collapse;
+      margin: 25px 0;
+      font-size: 0.9em;
+      font-family: sans-serif;
+      min-width: 400px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .foradex-table thead tr {
+      background-color: #009879;
+      color: #ffffff;
+      text-align: left;
+    }
+
+    .foradex-table th,
+    .foradex-table td {
+        padding: 12px 15px;
+    }
+
+    .foradex-table tbody tr {
+      border-bottom: 1px solid #dddddd;
+    }
+
+    .foradex-table tbody tr:nth-of-type(even) {
+      background-color: #f3f3f3;
+    }
+
+    .foradex-table tbody tr:last-of-type {
+      border-bottom: 2px solid #009879;
+    }
+
+    .foradex-table tbody tr.active-row {
+      font-weight: bold;
+      color: #009879;
+    }
+  </style>
+  <script>
+    const defaultResourceTypes = [
+      "mushroom",
+      "berry",
+      "flower",
+      "tree",
+      "herb",
+      "other"
+    ]
+
+    const createOption = (value) => {
+          let opt = document.createElement("option")
+          opt.value = value
+          opt.innerHTML = value
+          return opt
+    }
+
+    const refreshForadexTable = () => {
+      const actualForadex = getForadex()
+
+      const createForadexCell = (value) => {
+          let cell = document.createElement("th")
+          cell.innerText = value
+          return cell
+        }
+
+      const createForadexRow = (find) => {
+        let row = document.createElement("tr")
+        row.appendChild(createForadexCell(find.date))
+        row.appendChild(createForadexCell(find.name))
+        row.appendChild(createForadexCell(find.locationName))
+        row.appendChild(createForadexCell(find.type))
+        row.appendChild(createForadexCell(find.locationLong))
+        row.appendChild(createForadexCell(find.locationLat))
+        return row
+      }
+
+      let tableForadex = document.getElementById("foradex-table-body")
+      tableForadex.innerHTML = ""
+      actualForadex.find.map((find, i ) => {
+        tableForadex.appendChild(createForadexRow(find))
+      })
+    }
+
+    const initForadex = () => {
+        const foradex = localStorage.getItem("foradex")
+        if (foradex === null) {
+          setForadex({
+            "resource": [],
+            "location": [],
+            "find": [],
+            "resourceType": defaultResourceTypes
+          })        
+        }
+
+        const actualForadex = getForadex()
+
+        // populate the selects for resource and find type
+        let selectResourceType = document.getElementById("resource-type")
+        let selectFindType = document.getElementById("find-type")
+        actualForadex.resourceType.map((resourceType, i) => {
+          selectResourceType.appendChild(createOption(resourceType))
+          selectFindType.appendChild(createOption(resourceType))
+        })
+
+        // refresh table
+        refreshForadexTable()
+
+        // populate the find date
+        let dateFindDate = document.getElementById("find-date")
+        const currentDate = getCurrentDate()
+        console.log("current date: " + currentDate)
+        dateFindDate.value = currentDate
+    }
+
+    const getCurrentDate = () => {
+      const currentDate = new Date();
+      const year = currentDate.getFullYear();
+      const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+      const day = String(currentDate.getDate()).padStart(2, '0');
+      const formattedDate = `${year}-${month}-${day}`;
+      return formattedDate;
+    }
+    
+    const getForadex = () => {
+        return JSON.parse(localStorage.getItem("foradex"))
+    }
+
+    const setForadex = (foradex) => {
+        return localStorage.setItem("foradex", JSON.stringify(foradex))
+    }
+
+    const appendResource = (type, body) => {
+        let foradex = getForadex()
+        foradex[type].push(body)
+        setForadex(foradex)
+    }
+
+    const saveFormData = () => {
+      const name = document.getElementById("find-name").value;
+      const type = document.getElementById("find-type").value;
+      const date= document.getElementById("find-date").value;
+      const locationName = document.getElementById("find-locationName").value;
+      const locationLong = document.getElementById("find-locationLong").value;
+      const locationLat = document.getElementById("find-locationLat").value;
+
+      const formData = {
+        name: name,
+        type: type,
+        date: date,
+        locationName: locationName,
+        locationLong: locationLong,
+        locationLat: locationLat
+      };
+
+      appendResource("find", formData)
+
+      alert("Form data saved successfully!");
+
+      refreshForadexTable()
+    }
+
+    const saveResourceForm = () => {
+      const type = document.getElementById("resource-type").value
+      const name = document.getElementById("resource-name").value
+
+      const data = {
+        type: type,
+        name: name
+      }
+      appendResource("resource", data) 
+    }
+
+    const getCurrentLocation = () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          function(position) {
+            var latitude = position.coords.latitude;
+            var longitude = position.coords.longitude;
+
+            // Do something with the latitude and longitude values
+            console.log(position.coords)
+            console.log("Latitude: " + latitude);
+            console.log("Longitude: " + longitude);
+
+            // set the elements
+            let locationLongElement = document.getElementById("find-locationLong") 
+            let locationLatElement = document.getElementById("find-locationLat")
+            locationLongElement.value = longitude
+            locationLatElement.value = latitude
+          },
+          function(error) {
+            console.error("Error getting location:", error);
+          }
+        );
+      } else {
+        console.error("Geolocation is not supported by this browser.");
+      }
+    }
+
+    const initWebsite = () => {
+        initForadex()
+        getCurrentLocation()
+    }
+
+    window.addEventListener("DOMContentLoaded", () => { // when the page has loaded the DOM elements
+      let findTypeSelect = document.getElementById("find-type")
+      let findNameSelect = document.getElementById("find-name")
+      findTypeSelect.addEventListener("change", (e) => {
+        // clear all children option elements in the findNameSelect
+        findNameSelect.innerHTML = `<option value="" selected disabled>Select an option</option>`
+        // modifying the find-name to only include the type selected
+        const resourceType = findTypeSelect.value
+        console.log("find type was selected: " + resourceType)
+        const foradex = getForadex()
+        foradex.resource.map((resource, i) => {
+          if (resource.type === resourceType) {
+            findNameSelect.appendChild(createOption(resource.name))
+          }
+        })
+      })
+    })
+
+    window.onload = initWebsite
+  </script>
+</head>
+<body>
+  <h1>Add New Resource</h1>
+  <form>
+
+    <label for="type">Type:</label>
+    <select id="resource-type" name="type" required>
+      <option value="" selected disabled>Select an option</option>
+    </select><br><br>
+
+    <label for="name">Name:</label>
+    <input type="text" id="resource-name" name="name" required><br><br>
+
+    <button type="button" onclick="saveResourceForm()">Submit</button>
+  </form>
+  <h1>Add New Find</h1>
+  <form>
+    <label for="type">Type:</label>
+    <select id="find-type" name="type" required>
+      <option value="" selected disabled>Select an option</option>
+    </select><br><br>
+
+    <label for="name">Name:</label>
+    <select id="find-name" name="name" required>
+      <option value="" selected disabled>Select an option</option>
+    </select><br><br>
+
+    <label for="locationName">Location Name:</label>
+    <input type="text" id="find-locationName" name="locationName" required><br><br>
+    
+    <label for="date">Date:</label>
+    <input type="date" id="find-date" name="date" required><br><br>
+    
+    <label for="locationLong">Location Longitude:</label>
+    <input type="text" id="find-locationLong" name="locationLong" required><br><br>
+    
+    <label for="locationLat">Location Latitude:</label>
+    <input type="text" id="find-locationLat" name="locationLat" required><br><br>
+    
+    <button type="button" onclick="saveFormData()">Submit</button>
+  </form>
+  <h1>My Foradex</h1>
+  <table id="foradex-table" class="foradex-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Name</th>
+        <th>Location</th>
+        <th>Type</th>
+        <th>Longitude</th>
+        <th>Latitude</th>
+      </tr>
+    </thead>
+    <tbody id="foradex-table-body">
+    </tbody>
+  </table>
+</body>
+</html>
