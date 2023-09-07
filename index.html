@@ -6,13 +6,86 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script>
     const defaultResourceTypes = [
-      "mushroom",
-      "berry",
-      "flower",
-      "tree",
-      "herb",
-      "other"
+      "Mushroom",
+      "Berry",
+      "Tree",
+      "Herb",
+      "Flower",
+      "Other"
     ]
+
+    const defaultResources = [
+      // mushrooms
+      {
+        "type": "Mushroom",
+        "name": "Chicken of the Woods"
+      },
+      {
+        "type": "Mushroom",
+        "name": "Black Trumpet"
+      },
+      {
+        "type": "Mushroom",
+        "name": "Hen of the Woods"
+      },
+      {
+        "type": "Mushroom",
+        "name": "Chanterelle"
+      },
+      {
+        "type": "Mushroom",
+        "name": "Morel"
+      },
+
+      // berries
+      {
+        "type": "Berry",
+        "name": "Blueberry"
+      },
+      {
+        "type": "Berry",
+        "name": "Rasberry"
+      },
+      {
+        "type": "Berry",
+        "name": "Blackberry"
+      },
+      {
+        "type": "Berry",
+        "name": "Serviceberry"
+      },
+
+      // tree
+      {
+        "type": "Tree",
+        "name": "PawPaw"
+      },
+      {
+        "type": "Tree",
+        "name": "Apple"
+      },
+      {
+        "type": "Tree",
+        "name": "Chestnut"
+      },
+      {
+        "type": "Tree",
+        "name": "Black Cherry"
+      }
+    ]
+
+    const defaultForadexConfig = {
+      "defaultResourceType": "Mushroom",
+    }
+
+    const copyToClipboard = (textToCopy) => {
+      const textArea = document.createElement('textarea');
+      textArea.value = textToCopy;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
 
     const createOption = (value) => {
           let opt = document.createElement("option")
@@ -21,7 +94,24 @@
           return opt
     }
 
+
+    const deleteFind = (deleteFind) => {
+      let foradex = getForadex()
+      foradex.find.map((find, i) => {
+        // I wish javascript had a built in ability to compare objects here
+        //  this implementation is also a little silly but will due for now.
+        //  I think we might run out of localStorage place before this 
+        //  starts to become noticably ineffecient.
+        console.log("attempting to delete")
+        if (find.date === deleteFind.date && find.name === deleteFind.name && find.type === deleteFind.type && find.locationName === deleteFind.locationName && find.locationLong === deleteFind.locationLong && find.locationLat === deleteFind.locationLat) {
+          foradex.find.splice(i, 1)
+          setForadex(foradex)
+        }
+      })
+    }
+
     const refreshForadexTable = () => {
+      console.log("Refreshing foradex table")
       const actualForadex = getForadex()
 
       const createForadexCell = (value) => {
@@ -30,25 +120,58 @@
           return cell
       }
 
-      const createForadexGoogleMapsCall = (long, lat) => {
+      const createActionCell = (find) => {
+        const lat = find.locationLat
+        const long = find.locationLong
+
         let cell = document.createElement("th")
+
+        let container = document.createElement("div")
+        container.style = "display:flex;column-gap:10px;"
+
         let link = document.createElement("a")
         link.href = `https://www.google.com/maps/search/?api=1&query=${lat},${long}`
         link.innerText = "Map"
         console.log("google query: " + link.href)
-        cell.appendChild(link)
+
+        let share = document.createElement("a")
+        share.innerText = "Share"
+        share.href = "#0"
+        share.addEventListener("click", () => {
+          const findBlob = btoa(JSON.stringify(find))
+          const url = `https://andrewcopeland.github.io/foradex?share=${findBlob}`
+          copyToClipboard(url)
+          alert("Copied foradex share link to clipboard.")
+        })
+
+        let del = document.createElement("a")
+        del.innerText = "Delete"
+        del.href = "#0"
+        del.style = "color:red;"
+        del.addEventListener("click", () => {
+          if(confirm("Are you sure you want to Delete this find?")) {
+            deleteFind(find)
+          }
+        })
+
+
+        container.appendChild(link)
+        container.appendChild(share)
+        container.appendChild(del)
+        cell.appendChild(container)
+
         return cell
       }
 
       const createForadexRow = (find) => {
         let row = document.createElement("tr")
         row.appendChild(createForadexCell(find.date))
-        row.appendChild(createForadexCell(find.name))
         row.appendChild(createForadexCell(find.locationName))
-        row.appendChild(createForadexCell(find.type))
-        row.appendChild(createForadexCell(find.locationLat))
-        row.appendChild(createForadexCell(find.locationLong))
-        row.appendChild(createForadexGoogleMapsCall(find.locationLong, find.locationLat))
+        row.appendChild(createForadexCell(find.name))
+        // row.appendChild(createForadexCell(find.type))
+        // row.appendChild(createForadexCell(find.locationLat))
+        // row.appendChild(createForadexCell(find.locationLong))
+        row.appendChild(createActionCell(find))
         return row
       }
 
@@ -59,14 +182,26 @@
       })
     }
 
+    const mergeSharedFind = () => {
+      const urlParams = new URLSearchParams(window.location.href)
+      const shareParam = urlParams.get("share")
+      if (shareParam !== null) {
+        const find = atob(shareParam)
+        console.log("a share param was provided")
+        appendResource("find", find)
+      } else {
+        console.log("a share param was not provided")
+      }
+    }
+
     const initForadex = () => {
         const foradex = localStorage.getItem("foradex")
         if (foradex === null) {
           setForadex({
-            "resource": [],
-            "location": [],
+            "resource": defaultResources,
             "find": [],
-            "resourceType": defaultResourceTypes
+            "resourceType": defaultResourceTypes,
+            "config": defaultForadexConfig
           })        
         }
 
@@ -83,11 +218,20 @@
         // refresh table
         refreshForadexTable()
 
+        // refresh name select
+        refreshFindNameSelect()
+        
+
         // populate the find date
         let dateFindDate = document.getElementById("find-date")
         const currentDate = getCurrentDate()
         console.log("current date: " + currentDate)
         dateFindDate.value = currentDate
+
+        // at this point on initializing the foradex
+        //  check if the `share` query parameter exists so we can
+        //  merge this shared find
+        mergeSharedFind()
     }
 
     const getCurrentDate = () => {
@@ -104,7 +248,9 @@
     }
 
     const setForadex = (foradex) => {
-        return localStorage.setItem("foradex", JSON.stringify(foradex))
+        localStorage.setItem("foradex", JSON.stringify(foradex))
+        refreshFindNameSelect()
+        refreshForadexTable()
     }
 
     const appendResource = (type, body) => {
@@ -133,8 +279,6 @@
       appendResource("find", formData)
 
       alert("Find saved!");
-
-      refreshForadexTable()
     }
 
     const saveResourceForm = () => {
@@ -182,21 +326,77 @@
         getCurrentLocation()
     }
 
-    window.addEventListener("DOMContentLoaded", () => { // when the page has loaded the DOM elements
+    const refreshFindNameSelect = () => {
+      console.log("refreshing find-name select")
       let findTypeSelect = document.getElementById("find-type")
+      const resourceType = findTypeSelect.value
+
       let findNameSelect = document.getElementById("find-name")
+      findNameSelect.innerHTML = ""
+      
+      const foradex = getForadex()
+      foradex.resource.map((resource, i) => {
+        if (resource.type === resourceType) {
+          findNameSelect.appendChild(createOption(resource.name))
+        }
+      })
+    }
+
+    const downloadFile = (content, fileName, contentType) => {
+      const a = document.createElement('a');
+      const blob = new Blob([content], { type: contentType });
+      a.href = window.URL.createObjectURL(blob);
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(a.href);
+    }
+
+    function restoreForadexFromFile() {
+      const fileInput = document.getElementById('restore-foradex-input');
+      fileInput.click();
+      fileInput.addEventListener('change', function() {
+        const selectedFile = fileInput.files[0];
+        if (selectedFile) {
+          const reader = new FileReader();
+          reader.onload = function(event) {
+            const fileContent = event.target.result;
+            console.log('File content as string:', fileContent);
+            setForadex(JSON.parse(fileContent))
+            location.reload()
+          };
+          reader.readAsText(selectedFile);
+        }
+      });
+    }
+
+    window.addEventListener("DOMContentLoaded", () => { 
+      // Refresh find-name select whenever find-type is changed
+      let findTypeSelect = document.getElementById("find-type")
       findTypeSelect.addEventListener("change", (e) => {
-        // clear all children option elements in the findNameSelect
-        findNameSelect.innerHTML = `<option value="" selected disabled>Select an option</option>`
-        // modifying the find-name to only include the type selected
-        const resourceType = findTypeSelect.value
-        console.log("find type was selected: " + resourceType)
-        const foradex = getForadex()
-        foradex.resource.map((resource, i) => {
-          if (resource.type === resourceType) {
-            findNameSelect.appendChild(createOption(resource.name))
-          }
-        })
+        refreshFindNameSelect()
+      })
+
+      // When the reset foradex is clicked in the footer
+      let resetForadex = document.getElementById("reset-foradex")
+      resetForadex.addEventListener("click", (e) => {
+        if (confirm("Are you sure you want to delete your entire Foradex?")) {
+          localStorage.clear()
+          location.reload()
+        }
+      })
+
+      let backupForadex = document.getElementById("backup-foradex")
+      backupForadex.addEventListener("click", (e) => {
+        downloadFile(JSON.stringify(getForadex()), `foradex-${getCurrentDate()}.json`, "application/json")
+      })
+
+      let restoreForadex = document.getElementById("restore-foradex")
+      restoreForadex.addEventListener("click", (e) => {
+        if (confirm("Are you sure you want to restore Foradex (this will override your current foradex)?")) {
+          restoreForadexFromFile()
+        }
       })
     })
 
@@ -207,58 +407,69 @@
   <h1>Foradex</h1>
   <h4>a tool that logs a forager's findings and location</h4>
   <hr/>
-  <h2>Add New Resource</h2>
+  <h2>New Resource</h2>
   <form>
-
-    <label for="type">Type:</label>
-    <select id="resource-type" name="type" required>
-      <option value="" selected disabled>Select an option</option>
-    </select>
-
-    <label for="name">Name:</label>
-    <input type="text" id="resource-name" name="name" required>
-
+    <div style="display: flex;column-gap: 10px;">
+      <div>
+        <label for="type">Type:</label>
+        <select id="resource-type" name="type" required>
+        </select>
+      </div>
+      <div>
+        <label for="name">Name:</label>
+        <input type="text" id="resource-name" name="name" required>
+      </div>
+    </div>
     <button type="button" onclick="saveResourceForm()">Submit</button>
   </form>
   <hr/>
-  <h2>Add New Find</h2>
+  <h2>New Find</h2>
   <form>
-    <label for="type">Type:</label>
-    <select id="find-type" name="type" required>
-      <option value="" selected disabled>Select an option</option>
-    </select>
-
-    <label for="name">Name:</label>
-    <select id="find-name" name="name" required>
-      <option value="" selected disabled>Select an option</option>
-    </select>
-
+    <div style="display: flex;column-gap: 10px;">
+      <div>
+        <label for="type">Type:</label>
+        <select id="find-type" name="type" required>
+        </select>
+      </div>
+      <div>
+        <label for="name">Name:</label>
+        <select id="find-name" name="name" required>
+          <option value="" selected disabled>Select an option</option>
+        </select>
+      </div>
+    </div>
+    
     <label for="locationName">Location Name:</label>
     <input type="text" id="find-locationName" name="locationName" required>
     
+    <div style="display: flex;column-gap: 10px;">
+      <div>
+        <label for="locationLong">Location Longitude:</label>
+        <input type="text" id="find-locationLong" name="locationLong" required>
+      </div>
+      <div>
+        <label for="locationLat">Location Latitude:</label>
+        <input type="text" id="find-locationLat" name="locationLat" required>
+      </div>
+    </div>
+
     <label for="date">Date:</label>
     <input type="date" id="find-date" name="date" required>
-    
-    <label for="locationLong">Location Longitude:</label>
-    <input type="text" id="find-locationLong" name="locationLong" required>
-    
-    <label for="locationLat">Location Latitude:</label>
-    <input type="text" id="find-locationLat" name="locationLat" required>
-    
+
     <button type="button" onclick="saveFormData()">Submit</button>
   </form>
   <hr/>
-  <h2>My Foradex</h2>
+  <h2>My Finds</h2>
   <table id="foradex-table" class="foradex-table">
     <thead>
       <tr>
         <th>Date</th>
-        <th>Name</th>
         <th>Location</th>
-        <th>Type</th>
-        <th>Latitude</th>
-        <th>Longitude</th>
-        <th>Google Maps</th>
+        <th>Name</th>
+        <!-- <th>Type</th> -->
+        <!-- <th>Latitude</th>
+        <th>Longitude</th> -->
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody id="foradex-table-body">
@@ -273,8 +484,12 @@
   <p>No <b>cloud storage</b></p>
   <p>Hopefully we can share our foradexes some day 😜</p>
   <hr/>
-  <div class="footer">
-    <p><a href="https://github.com/AndrewCopeland/foradex">Github</a></p>
+  <div style="display:flex;column-gap:10px;">
+      <a href="https://github.com/AndrewCopeland/foradex">Github</a>
+      <a id="backup-foradex" href="#">Backup Foradex</a>
+      <a id="restore-foradex" href="#">Restore Foradex</a>
+      <a id="reset-foradex" style="color:red;" href="#">Reset Foradex</a>
   </div>
+  <input type="file" id="restore-foradex-input" style="display:none;">
 </body>
 </html>
