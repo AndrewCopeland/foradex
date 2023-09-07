@@ -110,6 +110,52 @@
       })
     }
 
+
+    const setFindInfo = (find) => {
+        const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${find.locationLat},${find.locationLong}`
+        const findBlob = btoa(JSON.stringify(find))
+        const shareUrl = `https://andrewcopeland.github.io/foradex?share=${findBlob}`
+        const findInfoMapping = {
+            "find-info-date": { innerHtml: `<p><b>Date:</b> ${find.date}</p>`},
+            "find-info-location": { innerHtml: `<p><b>Location:</b> ${find.locationName}</p>`},
+            "find-info-name": { innerHtml: `<p><b>Name:</b> ${find.name}</p>`},
+            "find-info-type": { innerHtml: `<p><b>Type:</b> ${find.type}</p>`},
+            "find-info-lat": { innerHtml: `<p><b>Latitude:</b> ${find.locationLat}</p>`},
+            "find-info-long": { innerHtml: `<p><b>Longitude:</b> ${find.locationLong}</p>`},
+            "find-info-map": { innerHtml: `<p><a href="${googleMapsUrl}">Open in Google Maps</a></p>`},
+            "find-info-share": { 
+                innerHtml: `<p><a href="#0">Share your find</a></p>`,
+                listener: (e) => {
+                    e.addEventListener("click", () => {
+                        copyToClipboard(shareUrl)
+                        alert("Copied foradex share link to clipboard.")
+                    })
+                } 
+            },
+            "find-info-delete": { 
+                innerHtml: `<p><a style="color:red;" href="#0">Delete</a></p>`,
+                listener: (e) => {
+                    e.addEventListener("click", () => {
+                        if(confirm("Are you sure you want to Delete this find?")) {
+                            deleteFind(find)
+                            findInfoOff()
+                        }
+                    })
+                }
+            },
+        }
+
+        for (const [elementId, config] of Object.entries(findInfoMapping)) {
+            let e = document.getElementById(elementId)
+            e.innerHTML = config.innerHtml
+            if ("listener" in config) {
+                config.listener(e)
+            }
+        }
+
+        findInfoOn()
+    }
+
     const refreshForadexTable = () => {
       console.log("Refreshing foradex table")
       const actualForadex = getForadex()
@@ -121,45 +167,14 @@
       }
 
       const createActionCell = (find) => {
-        const lat = find.locationLat
-        const long = find.locationLong
-
         let cell = document.createElement("th")
-
-        let container = document.createElement("div")
-        container.style = "display:flex;column-gap:10px;"
-
-        let link = document.createElement("a")
-        link.href = `https://www.google.com/maps/search/?api=1&query=${lat},${long}`
-        link.innerText = "Map"
-        console.log("google query: " + link.href)
-
         let share = document.createElement("a")
-        share.innerText = "Share"
+        share.innerText = "Info"
         share.href = "#0"
         share.addEventListener("click", () => {
-          const findBlob = btoa(JSON.stringify(find))
-          const url = `https://andrewcopeland.github.io/foradex?share=${findBlob}`
-          copyToClipboard(url)
-          alert("Copied foradex share link to clipboard.")
+            setFindInfo(find)
         })
-
-        let del = document.createElement("a")
-        del.innerText = "Delete"
-        del.href = "#0"
-        del.style = "color:red;"
-        del.addEventListener("click", () => {
-          if(confirm("Are you sure you want to Delete this find?")) {
-            deleteFind(find)
-          }
-        })
-
-
-        container.appendChild(link)
-        container.appendChild(share)
-        container.appendChild(del)
-        cell.appendChild(container)
-
+        cell.appendChild(share)
         return cell
       }
 
@@ -183,15 +198,25 @@
     }
 
     const mergeSharedFind = () => {
-      const urlParams = new URLSearchParams(window.location.href)
-      const shareParam = urlParams.get("share")
+      const urlParams = new URL(window.location.href)
+      const shareParam = urlParams.searchParams.get("share")
       if (shareParam !== null) {
-        const find = atob(shareParam)
+        const find = JSON.parse(atob(shareParam))
         console.log("a share param was provided")
         appendResource("find", find)
       } else {
         console.log("a share param was not provided")
       }
+    }
+
+    const findInfoOn = () => {
+        let findInfo = document.getElementById("find-info")
+        findInfo.style = ""
+    }
+
+    const findInfoOff = () => {
+        let findInfo = document.getElementById("find-info")
+        findInfo.style = "display: none;"
     }
 
     const initForadex = () => {
@@ -398,6 +423,11 @@
           restoreForadexFromFile()
         }
       })
+
+      let findInfoHide = document.getElementById("find-info-hide")
+      findInfoHide.addEventListener("click", (e) => {
+        findInfoOff()
+      })
     })
 
     window.onload = initWebsite
@@ -433,7 +463,7 @@
       </div>
       <div>
         <label for="name">Name:</label>
-        <select id="find-name" name="name" required>
+        <select id="find-name" name="name" style="max-width: 220px;"required>
           <option value="" selected disabled>Select an option</option>
         </select>
       </div>
@@ -443,14 +473,14 @@
     <input type="text" id="find-locationName" name="locationName" required>
     
     <div style="display: flex;column-gap: 10px;">
-      <div>
-        <label for="locationLong">Location Longitude:</label>
-        <input type="text" id="find-locationLong" name="locationLong" style="width: 100px;" required>
-      </div>
-      <div>
-        <label for="locationLat">Location Latitude:</label>
-        <input type="text" id="find-locationLat" name="locationLat" style="width: 100px;" required>
-      </div>
+        <div>
+            <label for="locationLat">Latitude:</label>
+            <input type="text" id="find-locationLat" name="locationLat" style="width: 100px;" required>
+        </div>
+        <div>
+            <label for="locationLong">Longitude:</label>
+            <input type="text" id="find-locationLong" name="locationLong" style="width: 100px;" required>
+        </div>
     </div>
 
     <label for="date">Date:</label>
@@ -459,6 +489,19 @@
     <button type="button" onclick="saveFormData()">Submit</button>
   </form>
   <hr/>
+  <div id="find-info" style="display: none;">
+    <h2>Find Info <a id="find-info-hide" href="#0">(hide)</a></h2>
+    <p id="find-info-date"></p>
+    <p id="find-info-location"></p>
+    <p id="find-info-name"></p>
+    <p id="find-info-type"></p>
+    <p id="find-info-lat"></p>
+    <p id="find-info-long"></p>
+    <a id="find-info-map"></a>
+    <a id="find-info-share"></a>
+    <a id="find-info-delete"></a>
+    <hr/>
+  </div>
   <h2>My Finds</h2>
   <table id="foradex-table" class="foradex-table">
     <thead>
