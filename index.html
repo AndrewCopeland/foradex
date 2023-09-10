@@ -2,9 +2,13 @@
 <html>
 <head>
   <title>Foradex</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="canonical" href="https://andrewcopeland.github.io/foradex" />
+  <link rel="stylesheet" href="/foradex/css/water.css">
   <script type="text/javascript">
+    if (navigator.serviceWorker) {
+      navigator.serviceWorker.register('/foradex/sw.js', {scope: '/foradex/'})
+    }
     const defaultResourceTypes = [
       "Mushroom",
       "Berry",
