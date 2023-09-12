@@ -4,11 +4,13 @@
   <title>Foradex</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="canonical" href="https://andrewcopeland.github.io/foradex" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
   <link rel="stylesheet" href="/foradex/css/water.css">
   <script type="text/javascript">
     if (navigator.serviceWorker) {
       navigator.serviceWorker.register('/foradex/sw.js', {scope: '/foradex/'})
     }
+
     const defaultResourceTypes = [
       "Mushroom",
       "Berry",
@@ -82,6 +84,72 @@
       "defaultResourceType": "Mushroom",
     }
 
+    function createUUID(){
+      let dt = new Date().getTime()
+      const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          const r = (dt + Math.random()*16)%16 | 0
+          dt = Math.floor(dt/16)
+          return (c=='x' ? r :(r&0x3|0x8)).toString(16)
+      })
+      return uuid
+    }
+
+    const setImage = (imageData) => {
+      const dbName = 'foradex-images';
+      const dbVersion = 1;
+      const objectStoreName = 'images';
+
+      const request = indexedDB.open(dbName, dbVersion);
+
+      request.onerror = function(event) {
+          console.error('Error opening IndexedDB:', event.target.error);
+      };
+
+      request.onupgradeneeded = function(event) {
+          const db = event.target.result;
+
+          if (!db.objectStoreNames.contains(objectStoreName)) {
+              const objectStore = db.createObjectStore(objectStoreName, { keyPath: 'id', autoIncrement: true });
+              objectStore.createIndex('data', 'data', { unique: false });
+          }
+      };
+
+      request.onsuccess = function(event) {
+          const db = event.target.result;
+          const transaction = db.transaction([objectStoreName], 'readwrite');
+          const objectStore = transaction.objectStore(objectStoreName);
+
+          const imageDataObj = { data: imageData };
+          const addRequest = objectStore.add(imageDataObj);
+
+          addRequest.onsuccess = function() {
+              console.log('Image added to IndexedDB');
+          };
+
+          addRequest.onerror = function() {
+              console.error('Error adding image to IndexedDB:', addRequest.error);
+          };
+
+          transaction.oncomplete = function() {
+              db.close();
+          };
+      };
+    }
+
+    function userUploadImages() {
+      const input = document.getElementById('imageInput');
+      if (input.files && input.files.length > 0) {
+          for (let i = 0; i < input.files.length; i++) {
+              const reader = new FileReader();
+              reader.onload = function(e) {
+                  const imageData = e.target.result;
+                  setImage(imageData);
+              };
+              reader.readAsDataURL(input.files[i]);
+          }
+      }
+    }
+
     const copyToClipboard = (textToCopy) => {
       const textArea = document.createElement('textarea');
       textArea.value = textToCopy;
@@ -98,7 +166,6 @@
           return opt
     }
 
-
     const deleteFind = (deleteFind) => {
       let foradex = getForadex()
       foradex.find.map((find, i) => {
@@ -114,18 +181,13 @@
       })
     }
 
-
     const setFindInfo = (find) => {
         const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${find.locationLat},${find.locationLong}`
         const findBlob = btoa(JSON.stringify(find))
         const shareUrl = `https://andrewcopeland.github.io/foradex?share=${findBlob}`
         const findInfoMapping = {
-            "find-info-date": { innerHtml: `<p><b>Date:</b> ${find.date}</p>`},
-            "find-info-location": { innerHtml: `<p><b>Location:</b> ${find.locationName}</p>`},
-            "find-info-name": { innerHtml: `<p><b>Name:</b> ${find.name}</p>`},
-            "find-info-type": { innerHtml: `<p><b>Type:</b> ${find.type}</p>`},
-            "find-info-lat": { innerHtml: `<p><b>Latitude:</b> ${find.locationLat}</p>`},
-            "find-info-long": { innerHtml: `<p><b>Longitude:</b> ${find.locationLong}</p>`},
+            "find-info-title": { innerHtml: `<p><b>${find.date} | ${find.locationName} - ${find.name} (${find.type})</b></p>`},
+            "find-info-location": { innerHtml: `<p>${find.locationLat}, ${find.locationLong}</p>`},
             "find-info-map": { innerHtml: `<p><a href="${googleMapsUrl}">Open in Google Maps</a></p>`},
             "find-info-share": { 
                 innerHtml: `<p><a href="#0">Share your find</a></p>`,
@@ -156,7 +218,7 @@
                 config.listener(e)
             }
         }
-
+        getImages(displayImages)
         findInfoOn()
     }
 
@@ -283,6 +345,7 @@
     }
 
     const appendResource = (type, body) => {
+        body["id"] = createUUID()
         let foradex = getForadex()
         foradex[type].push(body)
         setForadex(foradex)
@@ -382,7 +445,7 @@
       window.URL.revokeObjectURL(a.href);
     }
 
-    function restoreForadexFromFile() {
+    const restoreForadexFromFile = () => {
       const fileInput = document.getElementById('restore-foradex-input');
       fileInput.click();
       fileInput.addEventListener('change', function() {
@@ -400,7 +463,50 @@
       });
     }
 
+    const displayImages = (images) => {
+      const imageList = document.getElementById('find-info-image-container');
+      imageList.innerHTML = '';
+
+      images.forEach(function(imageData, index) {
+          const image = new Image();
+          image.src = imageData;
+          image.alt = 'Image ' + (index + 1);
+          imageList.appendChild(image);
+      });
+    }
+
+    const getImages = (callback) => {
+      const dbName = 'foradex-images'; // Change to your desired database name
+      const dbVersion = 1;
+      const objectStoreName = 'images';
+
+      const request = indexedDB.open(dbName, dbVersion);
+
+      request.onerror = function(event) {
+          console.error('Error opening IndexedDB:', event.target.error);
+      };
+
+      request.onsuccess = function(event) {
+          const db = event.target.result;
+          const transaction = db.transaction([objectStoreName], 'readonly');
+          const objectStore = transaction.objectStore(objectStoreName);
+          const images = [];
+
+          objectStore.openCursor().onsuccess = function(event) {
+              const cursor = event.target.result;
+              if (cursor) {
+                  images.push(cursor.value.data);
+                  cursor.continue();
+              } else {
+                  callback(images);
+                  db.close();
+              }
+          };
+      };
+    }
+
     window.addEventListener("DOMContentLoaded", () => { 
+
       // Refresh find-name select whenever find-type is changed
       let findTypeSelect = document.getElementById("find-type")
       findTypeSelect.addEventListener("change", (e) => {
@@ -441,7 +547,7 @@
   <h1>Foradex</h1>
   <h4>a tool that logs a forager's findings and location</h4>
   <hr/>
-  <h2>New Resource</h2>
+  <h2 id="new-resource">New Resource</h2>
   <form>
     <div style="display: flex;column-gap: 10px;">
       <div>
@@ -490,17 +596,19 @@
     <label for="date">Date:</label>
     <input type="date" id="find-date" name="date" required>
 
+    <input type="file" id="imageInput" accept="image/*" multiple>
+    <button onclick="userUploadImages()">Upload Images</button>
+
     <button type="button" onclick="saveFormData()">Submit</button>
   </form>
   <hr/>
   <div id="find-info" style="display: none;">
     <h2>Find Info <a id="find-info-hide" href="#0">(hide)</a></h2>
-    <p id="find-info-date"></p>
+    <div id="find-info-image-container">
+
+    </div>
+    <p id="find-info-title"></p>
     <p id="find-info-location"></p>
-    <p id="find-info-name"></p>
-    <p id="find-info-type"></p>
-    <p id="find-info-lat"></p>
-    <p id="find-info-long"></p>
     <a id="find-info-map"></a>
     <a id="find-info-share"></a>
     <a id="find-info-delete"></a>
