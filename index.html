@@ -98,10 +98,21 @@
           return opt
     }
 
+    const findFind = (body) => {
+        let foradex = getForadex()
+        for(const find of foradex.find) {
+            console.log("FIND: " + find)
+            console.log("BODY: " + body)
+            if (find.date === body.date && find.name === body.name && find.type === body.type && find.locationName === body.locationName && find.locationLong === body.locationLong && find.locationLat === body.locationLat) {
+                return find
+            }
+        }
+        return null
+    }
 
     const deleteFind = (deleteFind) => {
-      let foradex = getForadex()
-      foradex.find.map((find, i) => {
+        let foradex = getForadex()
+        foradex.find.map((find, i) => {
         // I wish javascript had a built in ability to compare objects here
         //  this implementation is also a little silly but will due for now.
         //  I think we might run out of localStorage place before this 
@@ -116,6 +127,7 @@
 
 
     const setFindInfo = (find) => {
+        setSelectedFind(find)
         const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${find.locationLat},${find.locationLong}`
         const findBlob = btoa(JSON.stringify(find))
         const shareUrl = `https://andrewcopeland.github.io/foradex?share=${findBlob}`
@@ -126,27 +138,6 @@
             "find-info-type": { innerHtml: `<p><b>Type:</b> ${find.type}</p>`},
             "find-info-lat": { innerHtml: `<p><b>Latitude:</b> ${find.locationLat}</p>`},
             "find-info-long": { innerHtml: `<p><b>Longitude:</b> ${find.locationLong}</p>`},
-            "find-info-map": { innerHtml: `<p><a href="${googleMapsUrl}">Open in Google Maps</a></p>`},
-            "find-info-share": { 
-                innerHtml: `<p><a href="#0">Share your find</a></p>`,
-                listener: (e) => {
-                    e.addEventListener("click", () => {
-                        copyToClipboard(shareUrl)
-                        alert("Copied foradex share link to clipboard.")
-                    })
-                } 
-            },
-            "find-info-delete": { 
-                innerHtml: `<p><a style="color:red;" href="#0">Delete</a></p>`,
-                listener: (e) => {
-                    e.addEventListener("click", () => {
-                        if(confirm("Are you sure you want to Delete this find?")) {
-                            deleteFind(find)
-                            findInfoOff()
-                        }
-                    })
-                }
-            },
         }
 
         for (const [elementId, config] of Object.entries(findInfoMapping)) {
@@ -223,6 +214,14 @@
         findInfo.style = "display: none;"
     }
 
+    const setSelectedFind = (find) => {
+        localStorage.setItem("selectedFind", JSON.stringify(find))
+    }
+
+    const getSelectedFind = () => {
+        return JSON.parse(localStorage.getItem("selectedFind"))
+    }
+
     const initForadex = () => {
         const foradex = localStorage.getItem("foradex")
         if (foradex === null) {
@@ -283,7 +282,27 @@
     }
 
     const appendResource = (type, body) => {
+        if (type === "find") {
+            const find = findFind(body)
+            console.log("Found this find: " + find)
+            if (find !== null) {
+                alert("Failed to add find - Already exists")
+                throw new Error("Failed to add find - Already exists")
+            }
+        }
         let foradex = getForadex()
+        // here we should validate that the resource/find being appeneded does not already exists
+
+        const currentItems = foradex[type]
+        for(const item of currentItems) {
+            let duplicateItem = true
+            for (const [field, value] of Object.entries(item)) {
+                // iterate over all the fields and if any of the currentValues are not 
+                if (body[field] !== value) {
+                    duplicateItem = false
+                }
+            }
+        }
         foradex[type].push(body)
         setForadex(foradex)
     }
@@ -400,38 +419,78 @@
       });
     }
 
-    window.addEventListener("DOMContentLoaded", () => { 
-      // Refresh find-name select whenever find-type is changed
-      let findTypeSelect = document.getElementById("find-type")
-      findTypeSelect.addEventListener("change", (e) => {
-        refreshFindNameSelect()
-      })
-
-      // When the reset foradex is clicked in the footer
-      let resetForadex = document.getElementById("reset-foradex")
-      resetForadex.addEventListener("click", (e) => {
-        if (confirm("Are you sure you want to delete your entire Foradex?")) {
-          localStorage.clear()
-          location.reload()
+    window.addEventListener("DOMContentLoaded", () => {
+        // listener config gets the element by the id provided as the key and sets 
+        //  an event listener
+        const listenerConfig = {
+            "find-type": {
+                type: "change",
+                listener: (e) => {
+                    refreshFindNameSelect()
+                }
+            },
+            "reset-foradex": {
+                type: "click",
+                listener: (e) => {
+                    if (confirm("Are you sure you want to delete your entire Foradex?")) {
+                        localStorage.clear()
+                        location.reload()
+                    }
+                }
+            },
+            "backup-foradex": {
+                type: "click",
+                listener: (e) => {
+                    downloadFile(JSON.stringify(getForadex()), `foradex-${getCurrentDate()}.json`, "application/json")
+                }
+            },
+            "restore-foradex": {
+                type: "click",
+                listener: (e) => {
+                    if (confirm("Are you sure you want to restore Foradex (this will override your current foradex)?")) {
+                        restoreForadexFromFile()
+                    }
+                }
+            },
+            "find-info-hide": {
+                type: "click",
+                listener: (e) => {
+                    findInfoOff()
+                }
+            },
+            "find-info-map": {
+                type: "click",
+                listener: (e) => {
+                    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${find.locationLat},${find.locationLong}`
+                    window.location.href = googleMapsUrl
+                }
+            },
+            "find-info-share": {
+                type: "click",
+                listener: (e) => {
+                    const find = getSelectedFind()
+                    const findBlob = btoa(JSON.stringify(find))
+                    const shareUrl = `https://andrewcopeland.github.io/foradex?share=${findBlob}`
+                    copyToClipboard(shareUrl)
+                    alert("Copied foradex share link to clipboard.")
+                }
+            },
+            "find-info-delete": {
+                type: "click",
+                listener: (e) => {
+                    const find = getSelectedFind()
+                    if(confirm("Are you sure you want to Delete this find?")) {
+                        deleteFind(find)
+                        findInfoOff()
+                    }
+                }
+            }
         }
-      })
 
-      let backupForadex = document.getElementById("backup-foradex")
-      backupForadex.addEventListener("click", (e) => {
-        downloadFile(JSON.stringify(getForadex()), `foradex-${getCurrentDate()}.json`, "application/json")
-      })
-
-      let restoreForadex = document.getElementById("restore-foradex")
-      restoreForadex.addEventListener("click", (e) => {
-        if (confirm("Are you sure you want to restore Foradex (this will override your current foradex)?")) {
-          restoreForadexFromFile()
+        for (const [elementId, config] of Object.entries(listenerConfig)) {
+            let element = document.getElementById(elementId)
+            element.addEventListener(config.type, config.listener)
         }
-      })
-
-      let findInfoHide = document.getElementById("find-info-hide")
-      findInfoHide.addEventListener("click", (e) => {
-        findInfoOff()
-      })
     })
 
     window.onload = initWebsite
@@ -501,9 +560,15 @@
     <p id="find-info-type"></p>
     <p id="find-info-lat"></p>
     <p id="find-info-long"></p>
-    <a id="find-info-map"></a>
-    <a id="find-info-share"></a>
-    <a id="find-info-delete"></a>
+    <button id="find-info-map">
+        Google Maps
+    </a>
+    <button id="find-info-share">
+        Share this Find
+    </button>
+    <button id="find-info-delete" style="color: red;">
+        Delete
+    </button>
     <hr/>
   </div>
   <h2>My Finds</h2>
