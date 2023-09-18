@@ -91,9 +91,6 @@
     }
 
     // copied from -> https://www.w3schools.com/howto/howto_js_slideshow.asp
-    let slideIndex = 1;
-    // showSlides(slideIndex);
-
     function plusSlides(n) {
         showSlides(slideIndex += n);
     }
@@ -212,6 +209,7 @@
             }
         }
         getImages(displayImages)
+        
         findInfoOn()
     }
 
@@ -538,40 +536,40 @@
     }
     
     const displayImages = (images) => {
-      const imageList = document.getElementById("find-info-image-container")
-      imageList.innerHTML = ''
+        const imageList = document.getElementById("find-info-image-container")
+        imageList.innerHTML = ''
 
-      const findInfoDots = document.getElementById("find-info-dots")
-      findInfoDots.innerHTML = ''
+        const findInfoDots = document.getElementById("find-info-dots")
+        findInfoDots.innerHTML = ''
 
-      // currently this just displays all the images, we need to figure out a way to add photos
-      //  for this specific find
-      images.forEach(function(imageData, index) {
-        console.log("displaying find-info image")
-        // container div
-        let div = document.createElement("div")
-        div.className = "mySlides fade"
+        images.forEach(function(imageData, index) {
+            console.log("displaying find-info image")
+            // container div
+            let div = document.createElement("div")
+            div.className = "mySlides fade"
 
-        // we should also add our dot
-        const dot = document.createElement("span")
-        dot.className = "dot"
-        dot.onclick = currentSlide(index + 1)
-        findInfoDots.appendChild(dot)
+            // we should also add our dot
+            const dot = document.createElement("span")
+            dot.className = "dot"
+            dot.onclick = currentSlide(index + 1)
+            findInfoDots.appendChild(dot)
+            
+
+            // image element
+            const image = new Image()
+            image.src = imageData
+            // height=300px should help with mobile viewing but if image is wide could still run into issues.
+            image.style = "height:300px;display:block;margin-left:auto;margin-right:auto;"
+            image.alt = 'Image ' + (index + 1)
+
+            div.appendChild(image)
+
+            console.log("appending div as child to imageList. " + div)
+            imageList.appendChild(div);
+
         
-
-        // image element
-        const image = new Image()
-        image.src = imageData
-        image.style = "height:300px;display:block;margin-left:auto;margin-right:auto;"
-        image.alt = 'Image ' + (index + 1)
-
-        div.appendChild(image)
-
-        console.log("appending div as child to imageList. " + div)
-        imageList.appendChild(div);
-
-
-      });
+        });
+        showSlides(1)
     }
 
     const getImages = (callback) => {
