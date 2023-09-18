@@ -227,7 +227,7 @@
         let cell = document.createElement("th")
         let share = document.createElement("a")
         share.innerText = "Info"
-        share.href = "#0"
+        share.href = "#find-info-header"
         share.addEventListener("click", () => {
             setFindInfo(find)
         })
@@ -269,11 +269,18 @@
     const findInfoOn = () => {
         let findInfo = document.getElementById("find-info")
         findInfo.style = ""
+
+        setTimeout(() => {
+            window.location.hash = "find-info-header"
+        }, 200)
+       
     }
 
     const findInfoOff = () => {
-        let findInfo = document.getElementById("find-info")
-        findInfo.style = "display: none;"
+        setTimeout(() => {
+            let findInfo = document.getElementById("find-info")
+            findInfo.style = "display: none;"
+        }, 200)
     }
 
     const setSelectedFind = (find) => {
@@ -833,7 +840,7 @@
   </form>
   <hr/>
   <div id="find-info" style="display: none;">
-    <h2>Find Info <a id="find-info-hide" href="#0">(hide)</a></h2>
+    <h3 id="find-info-header">Find Info <a id="find-info-hide" href="#my-finds-header">(hide)</a></h3>
     <div id="find-info-image-container1" class="slideshow-container">
         <div id="find-info-image-container">
 
@@ -864,7 +871,7 @@
     </button>
     <hr/>
   </div>
-  <h2>My Finds</h2>
+  <h3 id="my-finds-header">My Finds</h3>
   <table id="foradex-table" class="foradex-table">
     <thead>
       <tr>
