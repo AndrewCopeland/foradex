@@ -5,11 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="canonical" href="https://andrewcopeland.github.io/foradex" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
-  <link rel="stylesheet" href="/foradex/css/water.css">
+  <!-- <link rel="stylesheet" href="/foradex/css/water.css"> -->
   <script type="text/javascript">
-    if (navigator.serviceWorker) {
-      navigator.serviceWorker.register('/foradex/sw.js', {scope: '/foradex/'})
+    try {
+        if (navigator.serviceWorker) {
+            navigator.serviceWorker.register('/foradex/sw.js', {scope: '/foradex/'})
+        }
+    } catch (e) {
+        console.error(e)
     }
+    const dbVersion = 2;
+
 
     const defaultResourceTypes = [
       "Mushroom",
@@ -84,6 +90,39 @@
       "defaultResourceType": "Mushroom",
     }
 
+    // copied from -> https://www.w3schools.com/howto/howto_js_slideshow.asp
+    function plusSlides(n) {
+        showSlides(slideIndex += n);
+    }
+
+    function currentSlide(n) {
+        showSlides(slideIndex = n);
+    }
+
+    function showSlides(n) {
+        let i;
+        let slides = document.getElementsByClassName("mySlides");
+        let dots = document.getElementsByClassName("dot");
+        if (n > slides.length) {slideIndex = 1}
+        if (n < 1) {slideIndex = slides.length}
+        for (i = 0; i < slides.length; i++) {
+            slides[i].style.display = "none";
+        }
+        for (i = 0; i < dots.length; i++) {
+            dots[i].className = dots[i].className.replace(" active", "");
+        }
+        console.log("slides: " + slides + " length: " + slides.length)
+        if (slides.length == 0) {
+            return
+        }
+        slides[slideIndex-1].style.display = "block";
+        if (dots.length == 0) {
+            return
+        }
+        dots[slideIndex-1].className += " active";
+    }
+
+    //internal functions
     function createUUID(){
       let dt = new Date().getTime()
       const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -94,56 +133,14 @@
       return uuid
     }
 
-    const setImage = (imageData) => {
-      const dbName = 'foradex-images';
-      const dbVersion = 1;
-      const objectStoreName = 'images';
-
-      const request = indexedDB.open(dbName, dbVersion);
-
-      request.onerror = function(event) {
-          console.error('Error opening IndexedDB:', event.target.error);
-      };
-
-      request.onupgradeneeded = function(event) {
-          const db = event.target.result;
-
-          if (!db.objectStoreNames.contains(objectStoreName)) {
-              const objectStore = db.createObjectStore(objectStoreName, { keyPath: 'id', autoIncrement: true });
-              objectStore.createIndex('data', 'data', { unique: false });
-          }
-      };
-
-      request.onsuccess = function(event) {
-          const db = event.target.result;
-          const transaction = db.transaction([objectStoreName], 'readwrite');
-          const objectStore = transaction.objectStore(objectStoreName);
-
-          const imageDataObj = { data: imageData };
-          const addRequest = objectStore.add(imageDataObj);
-
-          addRequest.onsuccess = function() {
-              console.log('Image added to IndexedDB');
-          };
-
-          addRequest.onerror = function() {
-              console.error('Error adding image to IndexedDB:', addRequest.error);
-          };
-
-          transaction.oncomplete = function() {
-              db.close();
-          };
-      };
-    }
-
-    function userUploadImages() {
+    function userUploadImages(id) {
       const input = document.getElementById('imageInput');
       if (input.files && input.files.length > 0) {
           for (let i = 0; i < input.files.length; i++) {
               const reader = new FileReader();
               reader.onload = function(e) {
                   const imageData = e.target.result;
-                  setImage(imageData);
+                  setImage(id, imageData);
               };
               reader.readAsDataURL(input.files[i]);
           }
@@ -199,17 +196,12 @@
         const findBlob = btoa(JSON.stringify(find))
         const shareUrl = `https://andrewcopeland.github.io/foradex?share=${findBlob}`
         const findInfoMapping = {
-            // "find-info-title": { innerHtml: `<p><b>${find.date} | ${find.locationName} - ${find.name} (${find.type})</b></p>`},
-            // "find-info-location": { innerHtml: `<p>${find.locationLat}, ${find.locationLong}</p>`},
-            "find-info-date": { innerHtml: `<p><b>Date:</b> ${find.date}</p>`},
-            "find-info-location": { innerHtml: `<p><b>Location:</b> ${find.locationName}</p>`},
-            "find-info-name": { innerHtml: `<p><b>Name:</b> ${find.name}</p>`},
-            "find-info-type": { innerHtml: `<p><b>Type:</b> ${find.type}</p>`},
-            "find-info-lat": { innerHtml: `<p><b>Latitude:</b> ${find.locationLat}</p>`},
-            "find-info-long": { innerHtml: `<p><b>Longitude:</b> ${find.locationLong}</p>`},
+            "find-info-title": { innerHtml: `<p><b>${find.date} | ${find.locationName} - ${find.name} (${find.type})</b></p>`},
+            "find-info-location": { innerHtml: `<p>${find.locationLat}, ${find.locationLong}</p>`},
         }
-
+        console.log("select find info")
         for (const [elementId, config] of Object.entries(findInfoMapping)) {
+            console.log(`setting element with id ${elementId}`)
             let e = document.getElementById(elementId)
             e.innerHTML = config.innerHtml
             if ("listener" in config) {
@@ -217,6 +209,7 @@
             }
         }
         getImages(displayImages)
+        
         findInfoOn()
     }
 
@@ -351,7 +344,6 @@
     }
 
     const appendResource = (type, body) => {
-        body["id"] = createUUID()
         if (type === "find") {
             const find = findFind(body)
             console.log("Found this find: " + find)
@@ -387,6 +379,7 @@
       const locationLat = document.getElementById("find-locationLat").value;
 
       const formData = {
+        id: createUUID(),
         name: name,
         type: type,
         date: date,
@@ -396,6 +389,8 @@
       };
 
       appendResource("find", formData)
+
+      userUploadImages(formData.id)
 
       alert("Find saved!");
     }
@@ -490,24 +485,99 @@
       });
     }
 
-    const displayImages = (images) => {
-      const imageList = document.getElementById('find-info-image-container');
-      imageList.innerHTML = '';
-
-      images.forEach(function(imageData, index) {
-          const image = new Image();
-          image.src = imageData;
-          image.alt = 'Image ' + (index + 1);
-          imageList.appendChild(image);
-      });
-    }
-
-    const getImages = (callback) => {
-      const dbName = 'foradex-images'; // Change to your desired database name
-      const dbVersion = 1;
+    const setImage = (id, imageData) => {
+      const dbName = 'foradex-images';
+      
       const objectStoreName = 'images';
 
       const request = indexedDB.open(dbName, dbVersion);
+
+      request.onerror = function(event) {
+          console.error('Error opening IndexedDB:', event.target.error);
+      };
+
+      request.onupgradeneeded = function(event) {
+          const db = event.target.result;
+          console.log("on upgraded needed")
+          if (!db.objectStoreNames.contains(objectStoreName)) {
+              const objectStore = db.createObjectStore(objectStoreName, { keyPath: 'id', autoIncrement: true });
+              console.log("creating object store")
+              objectStore.createIndex('findId', 'findId', { unique: false });
+              objectStore.createIndex('data', 'data', { unique: false });
+          }
+      };
+
+      request.onsuccess = function(event) {
+          console.log("setImage on success triggered")
+          const db = event.target.result;
+          const transaction = db.transaction([objectStoreName], 'readwrite');
+          const objectStore = transaction.objectStore(objectStoreName);
+
+          const imageDataObj = { 
+            findId: id, 
+            data: imageData 
+          };
+          const addRequest = objectStore.add(imageDataObj);
+
+          addRequest.onsuccess = function() {
+              console.log('Image added to IndexedDB');
+          };
+
+          addRequest.onerror = function() {
+              console.error('Error adding image to IndexedDB:', addRequest.error);
+          };
+
+          transaction.oncomplete = function() {
+              db.close();
+          };
+      };
+
+      
+    }
+    
+    const displayImages = (images) => {
+        const imageList = document.getElementById("find-info-image-container")
+        imageList.innerHTML = ''
+
+        const findInfoDots = document.getElementById("find-info-dots")
+        findInfoDots.innerHTML = ''
+
+        images.forEach(function(imageData, index) {
+            console.log("displaying find-info image")
+            // container div
+            let div = document.createElement("div")
+            div.className = "mySlides fade"
+
+            // we should also add our dot
+            const dot = document.createElement("span")
+            dot.className = "dot"
+            dot.onclick = currentSlide(index + 1)
+            findInfoDots.appendChild(dot)
+            
+
+            // image element
+            const image = new Image()
+            image.src = imageData
+            // height=300px should help with mobile viewing but if image is wide could still run into issues.
+            image.style = "height:300px;display:block;margin-left:auto;margin-right:auto;"
+            image.alt = 'Image ' + (index + 1)
+
+            div.appendChild(image)
+
+            console.log("appending div as child to imageList. " + div)
+            imageList.appendChild(div);
+
+        
+        });
+        showSlides(1)
+    }
+
+    const getImages = (callback) => {
+      const dbName = 'foradex-images';
+      const objectStoreName = 'images';
+
+      const request = indexedDB.open(dbName, dbVersion);
+      const selectedFind = getSelectedFind()
 
       request.onerror = function(event) {
           console.error('Error opening IndexedDB:', event.target.error);
@@ -519,15 +589,22 @@
           const objectStore = transaction.objectStore(objectStoreName);
           const images = [];
 
+          // TODO - it would be better to scope down the query to the exact findId
+          //  look into querying for a specific key
           objectStore.openCursor().onsuccess = function(event) {
-              const cursor = event.target.result;
-              if (cursor) {
-                  images.push(cursor.value.data);
-                  cursor.continue();
-              } else {
-                  callback(images);
-                  db.close();
-              }
+            const cursor = event.target.result;
+            if (cursor) {
+                // console.log("cursor.value: " + JSON.stringify(cursor.value))
+                if (cursor.value.findId == selectedFind.id) {
+                    images.push(cursor.value.data)
+                    cursor.continue()
+                } else {
+                    cursor.continue()
+                }
+            } else {
+                callback(images);
+                db.close();
+            }
           };
       };
     }
@@ -608,6 +685,95 @@
 
     window.onload = initWebsite
   </script>
+  <style>
+    * {box-sizing:border-box}
+
+    /* Slideshow container */
+    .slideshow-container {
+        max-width: 1000px;
+        position: relative;
+        margin: auto;
+    }
+
+    /* Hide the images by default */
+    .mySlides {
+        display: none;
+    }
+
+    /* Next & previous buttons */
+    .prev, .next {
+        cursor: pointer;
+        position: absolute;
+        top: 50%;
+        width: auto;
+        margin-top: -22px;
+        padding: 16px;
+        color: white;
+        font-weight: bold;
+        font-size: 18px;
+        transition: 0.6s ease;
+        border-radius: 0 3px 3px 0;
+        user-select: none;
+    }
+
+    /* Position the "next button" to the right */
+    .next {
+        right: 0;
+        border-radius: 3px 0 0 3px;
+    }
+
+    /* On hover, add a black background color with a little bit see-through */
+    .prev:hover, .next:hover {
+        background-color: rgba(0,0,0,0.8);
+    }
+
+    /* Caption text */
+    .text {
+        color: #f2f2f2;
+        font-size: 15px;
+        padding: 8px 12px;
+        position: absolute;
+        bottom: 8px;
+        width: 100%;
+        text-align: center;
+    }
+
+    /* Number text (1/3 etc) */
+    .numbertext {
+        color: #f2f2f2;
+        font-size: 12px;
+        padding: 8px 12px;
+        position: absolute;
+        top: 0;
+    }
+
+    /* The dots/bullets/indicators */
+    .dot {
+        cursor: pointer;
+        height: 15px;
+        width: 15px;
+        margin: 0 2px;
+        background-color: #bbb;
+        border-radius: 50%;
+        display: inline-block;
+        transition: background-color 0.6s ease;
+    }
+
+    .active, .dot:hover {
+        background-color: #717171;
+    }
+
+    /* Fading animation */
+    .fade {
+        animation-name: fade;
+        animation-duration: 1.5s;
+    }
+
+    @keyframes fade {
+        from {opacity: .4}
+        to {opacity: 1}
+    }
+  </style>
 </head>
 <body>
   <h1>Foradex</h1>
@@ -663,22 +829,30 @@
     <input type="date" id="find-date" name="date" required>
 
     <input type="file" id="imageInput" accept="image/*" multiple>
-    <button onclick="userUploadImages()">Upload Images</button>
-
     <button type="button" onclick="saveFormData()">Submit</button>
   </form>
   <hr/>
   <div id="find-info" style="display: none;">
     <h2>Find Info <a id="find-info-hide" href="#0">(hide)</a></h2>
-    <div id="find-info-image-container">
+    <div id="find-info-image-container1" class="slideshow-container">
+        <div id="find-info-image-container">
 
-    </div>
+        </div>
+      
+        <!-- Next and previous buttons -->
+        <a class="prev" onclick="plusSlides(-1)">&#10094;</a>
+        <a class="next" onclick="plusSlides(1)">&#10095;</a>
+      </div>
+      <br>
+      
+      <!-- The dots/circles -->
+      <div id="find-info-dots" style="text-align:center">
+        <!-- <span class="dot" onclick="currentSlide(1)"></span>
+        <span class="dot" onclick="currentSlide(2)"></span>
+        <span class="dot" onclick="currentSlide(3)"></span> -->
+      </div>
     <p id="find-info-title"></p>
     <p id="find-info-location"></p>
-    <p id="find-info-name"></p>
-    <p id="find-info-type"></p>
-    <p id="find-info-lat"></p>
-    <p id="find-info-long"></p>
     <button id="find-info-map">
         Google Maps
     </a>
